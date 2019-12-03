@@ -11,17 +11,25 @@ class TestNumberSequenceGeneration(unittest.TestCase):
         self.number_sequence = [3, 7, 8, 6]
         self.spacing_range = (1, 4)
         self.image_width = 118
-        self.test_sequence_image = generators.generate_numbers_sequence(
+        self.generated_stacked_digit_sequence = generators.generate_numbers_sequence(
             self.number_sequence,
             self.spacing_range,
             self.image_width
         )
-        self.test_stacked_digits = np.load('tests/test_data/stacked_digits.npy')
+        self.testing_stacked_digit_sequence = np.load('tests/test_data/stacked_digits.npy')
 
     def test_image_generation(self):
-        expected = self.test_stacked_digits
-        actual = self.test_sequence_image
+        expected = self.testing_stacked_digit_sequence
+        actual = self.generated_stacked_digit_sequence
         np.testing.assert_array_equal(expected, actual)
+
+    def test_image_generation_timeout_error(self):
+        with self.assertRaisesRegexp(Exception, "empty list"):
+            generators.generate_numbers_sequence(
+                self.number_sequence,
+                self.spacing_range,
+                self.image_width
+            )
 
     def test_number_sequence_empty_list(self):
         # Empty list is provided as numbers to generate. test right assertion is thrown
