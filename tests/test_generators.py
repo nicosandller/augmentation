@@ -1,134 +1,137 @@
+import pickle
 import unittest
 import numpy as np
 
-from augumentation import generators
+from augumentation.generators import NumberSequenceGenerator
 
 
 class TestNumberSequenceGeneration(unittest.TestCase):
     def setUp(self):
-        # Set seed for randomness
-        np.random.seed(0)
+        self.seed = 0  # fixed randomness
+        self.MNIST_filepath = {
+            'images': 'tests/test_data/test-images.idx3-ubyte_A',
+            'labels': 'tests/test_data/test-labels.idx3-ubyte_A'
+        }
+        self.working_nsg = NumberSequenceGenerator(self.MNIST_filepath)
         self.number_sequence = [3, 7, 8, 6]
         self.spacing_range = (1, 4)
         self.image_width = 118
-        self.generated_stacked_digit_sequence = generators.generate_numbers_sequence(
+        self.testing_raw_image_representations = np.load('tests/test_data/raw_image_representations.npy')
+        self.testing_stacked_digit_sequence = np.load('tests/test_data/stacked_digits.npy')
+        self.number_sequence_output = self.working_nsg.generate_numbers_sequence(
             self.number_sequence,
             self.spacing_range,
             self.image_width
         )
-        self.testing_stacked_digit_sequence = np.load('tests/test_data/stacked_digits.npy')
 
     def test_image_generation(self):
+        np.random.seed(self.seed)
         expected = self.testing_stacked_digit_sequence
-        actual = self.generated_stacked_digit_sequence
+        actual = self.working_nsg.generate_numbers_sequence(
+            self.number_sequence,
+            self.spacing_range,
+            self.image_width
+        )
+
         np.testing.assert_array_equal(expected, actual)
 
-    def test_image_generation_timeout_error(self):
-        with self.assertRaisesRegexp(Exception, "empty list"):
-            generators.generate_numbers_sequence(
-                self.number_sequence,
-                self.spacing_range,
-                self.image_width
-            )
+    def test_load_idx_data_matrix_size(self):
+        expected = (100, 28, 28)
+        actual = self.working_nsg._load_idx_data(self.MNIST_filepath)[2:5]
+        self.assertTupleEqual(expected, actual)
 
-    def test_number_sequence_empty_list(self):
-        # Empty list is provided as numbers to generate. test right assertion is thrown
-        # "Expected number sequence, received []"
-        with self.assertRaisesRegexp(Exception, "empty list"):
-            generators.generate_numbers_sequence([], self.spacing_range, self.image_width)
+    def test_load_idx_data_wrong_input(self):
+        bad_filename = 245
+        with self.assertRaisesRegex(Exception, "filename input"):
+            self.working_nsg._load_idx_data(bad_filename)
 
-    def test_number_sequence_not_list(self):
-        # String as numbers to generate. test right assertion is thrown
-        with self.assertRaisesRegexp(Exception, "got <some string>"):
-            generators.generate_numbers_sequence("some string", self.spacing_range, self.image_width)
+    def test_load_idx_data_input_mismatch(self):
+        bad_filename = {
+            'images': 'tests/test_data/test-images.idx3-ubyte_A',
+            'labels': 'tests/test_data/test-labels.idx3-ubyte_B'
+        }
+        with self.assertRaisesRegex(Exception, "n_labels: 20"):
+            self.working_nsg._load_idx_data(bad_filename)
 
-    def test_number_sequence_outside_range(self):
-        # one of the generator numbers is outside the [0-9] range
-        with self.assertRaisesRegexp(Exception, r"generator number outside range \[0-9\]"):
-            generators.generate_numbers_sequence([1, 77], self.spacing_range, self.image_width)
+    def test_digits_empty_list(self):
+        with self.assertRaisesRegex(Exception, "Expected a number sequence"):
+            self.working_nsg._select_image_representations([])
 
-    @unittest.skip("not implemented")
+    def test_digits_not_list(self):
+        with self.assertRaisesRegex(Exception, "Expected a number sequence"):
+            self.working_nsg._select_image_representations("some string")
+
+    def test_digits_outside_range(self):
+        with self.assertRaisesRegex(Exception, "must be within"):
+            self.working_nsg._select_image_representations([1, 10])
+
     def test_number_sequence(self):
-        expected = self.number_sequence
-        # breakout function to test
-        # actual = somefuction(self.number_sequence)
-        self.asserEqual(expected, actual)
+        np.random.seed(self.seed)
+        expected = self.testing_raw_image_representations
+        actual = self.working_nsg._select_image_representations(self.number_sequence)
+        np.testing.assert_array_equal(expected, actual)
 
     def test_width_not_number(self):
-        # wrong dtype provided
-        with self.assertRaisesRegexp(Exception, r"got <(34,506)>"):
-            generators.generate_numbers_sequence(self.number_sequence, self.spacing_range, (34, 506))
+        wrong_input = (34, 506)
+        with self.assertRaisesRegex(Exception, "expected <int>"):
+            self.working_nsg.generate_numbers_sequence(self.number_sequence, self.spacing_range, wrong_input)
 
-    def test_width_outside_min_bound(self):
-        # min required width = (n * 28) + (min_range * (n-1))
-        # here ==> (10 * 28) + (1*9) = 289
-        with self.assertRaisesRegexp(Exception, r"width expected in ranges: \[289-334\]"):
-            generators.generate_numbers_sequence(
-                self.number_sequence,  # n = 4
-                self.spacing_range,  #
-                230
+    def test_width_below_min_bound(self):
+        with self.assertRaisesRegex(Exception, r"min:115, max:124"):
+            self.working_nsg._calculate_available_space(
+                self.spacing_range,
+                112,
+                len(self.number_sequence)
             )
 
-    def test_width_outside_max_bound(self):
-        with self.assertRaisesRegexp(Exception, r"width expected in ranges: \[289-334\]"):
-            generators.generate_numbers_sequence(
-                self.number_sequence,  # n = 4
-                self.spacing_range,  #
-                500
+    def test_width_above_max_bound(self):
+        with self.assertRaisesRegex(Exception, r"min:115, max:124"):
+            self.working_nsg._calculate_available_space(
+                self.spacing_range,
+                130,
+                len(self.number_sequence)
             )
 
-    @unittest.skip("not implemented")
-    def test_image_width(self):
-        # distance of resulting image is same as prescrived
-        expected = 300
-        sequence_image = generators.generate_numbers_sequence(
-            self.number_sequence,  # n = 4
-            self.spacing_range,  #
-            expected
+    def test_width(self):
+        expected = 8
+        actual = self.working_nsg._calculate_available_space(
+            self.spacing_range,
+            120,
+            len(self.number_sequence)
         )
-        actual = sequence_image.shape[0]
-        self.asserEqual(expected, actual)
+        self.assertEqual(expected, actual)
 
     def test_spacing_range_not_tuple(self):
-        # test exception
-        with self.assertRaisesRegexp(Exception, r"got <\{1\}>"):
-            generators.generate_numbers_sequence(
-                self.number_sequence,
-                {1},
-                self.image_width
-            )
+        wrong_input = [23, 42]
+        with self.assertRaisesRegex(Exception, "expected <tuple>"):
+            self.working_nsg._calculate_digit_spacing(len(self.number_sequence), 8, wrong_input)
 
-    def test_spacing_range_empty_tuple(self):
-        # test exception
-        with self.assertRaisesRegexp(Exception, "empty tuple"):
-            generators.generate_numbers_sequence(
-                self.number_sequence,
-                (),
-                self.image_width
-            )
+    def test_spacing_range_bad_tuple(self):
+        wrong_input = (2, 5, 2)
+        with self.assertRaisesRegex(Exception, "expected <tuple> of size 2"):
+            self.working_nsg._calculate_digit_spacing(len(self.number_sequence), 8, wrong_input)
 
-    # TODO: expand this to test space_search more extensively
-    @unittest.skip("not implemented")
     def test_spacing_range(self):
-        pass
+        np.random.seed(self.seed)
+        with open('tests/test_data/test_digit_spacing.npy', 'rb') as file:
+            expected = pickle.load(file)
+        actual = self.working_nsg._calculate_digit_spacing(len(self.number_sequence), 8, self.spacing_range)
+        for i in range(len(expected)):
+            np.testing.assert_array_equal(expected[i], actual[i])
 
-    def test_pixel_range(self):
-        # TODO: re-write to have a more descriptive fail message.
-        # each pixel is within 0 an 1 range (scaled down from 0 to 255).
-        sequence_image = self.test_sequence_image
-        outside_range_check_list = [True if (x > 1) or (x < 0) else False for x in sequence_image.flat]
-        # true if any pixel is outside range.
-        any_outside_range = any(outside_range_check_list)
-        self.assertFalse(any_outside_range)
+    # TODO: add timeout tests for digit spacing range generator function
+
+    def test_pixels_within_range(self):
+        number_sequence_output = self.number_sequence_output
+        outside_range_check_list = [True if (x > 1) or (x < 0) else False for x in number_sequence_output.flat]
+        self.assertFalse(any(outside_range_check_list))  # true if any pixel is outside range.
 
     def test_image_height(self):
-        # MNST height is 28 pixels
         expected = 28
-        sequence_image = self.test_sequence_image
-        actual = sequence_image.shape[0]
+        actual = self.number_sequence_output.shape[0]
         self.assertEqual(expected, actual)
 
     def test_pixel_dtype(self):
         expected = np.float32().dtype
-        actual = self.test_sequence_image[10][50].dtype
-        self.assertEqual(expected, actual)
+        actual = self.number_sequence_output[0][0].dtype
+        self.assertIs(actual, expected)
