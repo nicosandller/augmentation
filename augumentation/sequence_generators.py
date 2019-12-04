@@ -1,9 +1,11 @@
 """
-Module docs
+Sequence Generators
 [In progress]
 """
+import sys
 import struct
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class NumberSequenceGenerator():
@@ -178,12 +180,18 @@ class NumberSequenceGenerator():
 
         return stacked_images.astype('float32')
 
-    # Notes
-    # training process needs fixed width
-    # space range could be optional. Width can't
-    # ideally space between digits would vary with some distribution
-    # if all values are max but sum < tot_sum then raise error.
-    # if all values are min but sum > tot_sum then raise error
-    # min and max have to be more and less than tot_sum/n
-    # Create Exception suite
-    # Add logs
+
+if __name__ == "__main__":
+    # TODO: add try statement and exception
+    sequence_to_gen = sys.argv[1]
+    min_spacing = sys.argv[2]
+    max_spacing = sys.argv[3]
+    image_width = sys.argv[4]
+
+    stacked_images = NumberSequenceGenerator().generate_numbers_sequence(
+        sequence_to_gen,
+        (min_spacing, max_spacing),
+        image_width
+    )
+    plt.imsave('stacked_images.png', stacked_images, cmap='Greys')
+    print("Successfully created a digit sequence and saved as 'stacked_images.png'.")

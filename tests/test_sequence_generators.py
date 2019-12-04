@@ -2,7 +2,7 @@ import pickle
 import unittest
 import numpy as np
 
-from augumentation.generators import NumberSequenceGenerator
+from augumentation.sequence_generators import NumberSequenceGenerator
 
 
 class TestNumberSequenceGeneration(unittest.TestCase):
