@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 
 class NumberSequenceGenerator():
-    def __init__(self, input_data_filespec=None):
+    def __init__(self, input_data_filespec=None, spacing_method='equidistant'):
         if input_data_filespec is None:
             input_data_filespec = {
                 'images': 'augumentation/data/train-images.idx3-ubyte',
@@ -21,6 +21,13 @@ class NumberSequenceGenerator():
         self.n_imgs = data[2]
         self.single_img_heigh = data[3]
         self.single_img_width = data[4]
+        valid_spacing_methods = ['equidistant', 'random_selection']
+        if spacing_method not in valid_spacing_methods:
+            raise Exception(
+                "Invalid <spacing_method>. It must be one of the following {methods}"
+                .format(methods=valid_spacing_methods)
+            )
+        self.method = spacing_method
 
     def _load_idx_data(self, filename):
         """
@@ -32,7 +39,7 @@ class NumberSequenceGenerator():
             raise Exception("Wrong filename input [input_data_filespec]. It must match what specified in docstrings.")
 
         with open(img_file, 'rb') as images_binary:
-            info_bytes = images_binary.read(16)
+            info_bytes = images_binary.read(16)  # first 16 positions have dataset information
             (n_imgs, n_rows, n_cols) = (struct.unpack('>I', info_bytes[x:x + 4])[0] for x in range(4, 13, 4))
             pixel_bytes = images_binary.read(n_imgs * n_rows * n_cols)
             images = np.asarray(
@@ -58,11 +65,12 @@ class NumberSequenceGenerator():
         """
         [In progress]
         """
-        if (not digits or not isinstance(digits, list)):
+        if (not digits or not isinstance(digits, list)):  # if digits is empty list or not list
             raise Exception("Wrong digit input. Expected a number sequence. e.g: [1,2,3]")
         if not all((x >= 0 and x < 10) for x in digits):
             raise Exception("Wrong digit input. All elements in sequence must be within the [0-9] range.")
 
+        # TODO: add exception to handle case where digit not in self.labels
         digit_selection_ixs = [np.random.choice(np.where(self.labels == x)[0], 1)[0] for x in digits]
         candidate_imgs = self.images[digit_selection_ixs]
         rescaled_candidate_imgs = candidate_imgs / 255
@@ -81,9 +89,9 @@ class NumberSequenceGenerator():
                 "Wrong <image_width> input: expected <int>, got {input}".format(input=type(image_width))
             )
         digit_space_req = n_digits * self.single_img_width
-        # Note: spaces between digits is n_digits - 1
-        min_total_space = (digit_space_req + ((n_digits - 1) * spacing_range[0]))
-        max_total_space = (digit_space_req + ((n_digits - 1) * spacing_range[1]))
+        n_spaces = (n_digits - 1)
+        min_total_space = (digit_space_req + (n_spaces * spacing_range[0]))
+        max_total_space = (digit_space_req + (n_spaces * spacing_range[1]))
         if (image_width < digit_space_req) or (image_width < min_total_space) or (image_width > max_total_space):
             raise Exception(
                 """
@@ -106,17 +114,29 @@ class NumberSequenceGenerator():
         [In progress]
         Calculates spacing between digits.
         """
-        try:
-            if (not isinstance(spacing_range, tuple)) or (len(spacing_range) != 2):
-                raise Exception()
-        except (TypeError, Exception):
-            raise Exception(
-                "Wrong <spacing_range> input: expected <tuple> of size 2, got {input}".format(input=spacing_range)
-            )
-        spacing_options = list(
-            self.permutations_w_constraints(n_digits - 1, available_space, spacing_range[0], spacing_range[1])
+        spacing_exception = (
+            "Wrong <spacing_range> input: expected <tuple> of size 2, got {input}".format(input=spacing_range)
         )
-        selected_spaces = spacing_options[np.random.choice(len(spacing_options), 1)[0]]
+        if not isinstance(spacing_range, tuple):  # If not tuple
+            raise Exception(spacing_exception)
+        elif (len(spacing_range) != 2):  # if tuple doesn't have exactly 2 elements
+            raise Exception(spacing_exception)
+
+        n_spaces = (n_digits - 1)
+        if n_digits == 1:  # if there's only 1 digit in the sequence: append all available space
+            selected_spaces = [available_space]
+        elif self.method == 'equidistant':
+            equidistant_space = available_space / n_spaces
+            if (equidistant_space % 1):
+                raise Exception("There is no integer split for digit spacing with the specified <image_width>.")
+            selected_spaces = [int(equidistant_space) for x in range(n_spaces)]
+        elif self.method == 'random_selection':
+            # TODO: add timeout
+            spacing_options = list(
+                self.permutations_w_constraints(n_spaces, available_space, spacing_range[0], spacing_range[1])
+            )
+            selected_spaces = spacing_options[np.random.choice(len(spacing_options), 1)[0]]
+
         spacing = []
         for i in range(len(selected_spaces)):
             spacing.append(
@@ -126,7 +146,6 @@ class NumberSequenceGenerator():
 
         return spacing
 
-    # @lru_cache(maxsize=10000)
     def permutations_w_constraints(self, n_elements, sum_total, min_value, max_value):
         """
         [In progress]
@@ -182,13 +201,16 @@ class NumberSequenceGenerator():
 
 
 if __name__ == "__main__":
-    # TODO: add try statement and exception
     sequence_to_gen = sys.argv[1]
     min_spacing = sys.argv[2]
     max_spacing = sys.argv[3]
     image_width = sys.argv[4]
+    try:
+        spacing_method = sys.argv[5]
+    except IndexError:
+        spacing_method = 'equidistant'
 
-    stacked_images = NumberSequenceGenerator().generate_numbers_sequence(
+    stacked_images = NumberSequenceGenerator(spacing_method=spacing_method).generate_numbers_sequence(
         sequence_to_gen,
         (min_spacing, max_spacing),
         image_width
