@@ -4,7 +4,6 @@ Sequence Generators
 This module hosts sequence generators with the purpose of generating images
 representing sequences (eg: numbers, others), for data augmentation purposes.
 """
-import sys
 import uuid
 import struct
 import argparse
@@ -14,9 +13,18 @@ import matplotlib.pyplot as plt
 
 class NumberSequenceGenerator():
     """
-    Class docs. Describe __init__ params.
+    Generator class for digit sequences.
+
+    Parameters
+    ----------
+    input_filespec:
+        An dict arrangement of 2 elements: {'images':[path], 'labels':[path]}
+        referencing idx fileformat containing digit images and labels.
+    spacing_method:
+        A string specifying the type of spacing method selected. Options are:
+        ['equidistant', 'random_selection']. Default is 'random_selection'
     """
-    def __init__(self, input_filespec=None, spacing_method='equidistant'):
+    def __init__(self, input_filespec=None, spacing_method='random_selection'):
         if input_filespec is None:
             input_filespec = {
                 'images': 'augumentation/data/train-images.idx3-ubyte',
@@ -307,6 +315,6 @@ if __name__ == "__main__":
         plt.imsave(filename, stacked_images, cmap='Greys')
 
     print(
-        'Successfully created {n_sequence_images} digit sequence and saved on'
+        'Successfully created {n_sequence_images} digit sequence and saved on '
         'current directory'.format(n_sequence_images=n_sequence_images)
     )
