@@ -15,12 +15,18 @@ class TestNumberSequenceGeneration(unittest.TestCase):
         self.number_sequence = [3, 7, 8, 6]
         self.spacing_range = (1, 4)
         self.image_width = 118
-        self.nsg_eq = NumberSequenceGenerator(self.MNIST_filepath, 'equidistant')
-        self.nsg_rs = NumberSequenceGenerator(self.MNIST_filepath, 'random_selection')
-        self.equidistant_number_sequence_output = self.nsg_rs.generate_numbers_sequence(
-            self.number_sequence,
-            self.spacing_range,
-            self.image_width
+        self.nsg_eq = NumberSequenceGenerator(
+            self.MNIST_filepath, 'equidistant'
+        )
+        self.nsg_rs = NumberSequenceGenerator(
+            self.MNIST_filepath, 'random_selection'
+        )
+        self.equidistant_number_sequence_output = (
+            self.nsg_rs.generate_numbers_sequence(
+                self.number_sequence,
+                self.spacing_range,
+                self.image_width
+            )
         )
 
     def test_invalid_generator_method(self):
@@ -61,64 +67,92 @@ class TestNumberSequenceGeneration(unittest.TestCase):
     def test_select_image_representation(self):
         np.random.seed(self.seed)
         expected = np.load('tests/test_data/raw_image_representations.npy')
-        actual = self.nsg_eq._select_image_representations(self.number_sequence)
+        actual = self.nsg_eq._select_image_representations(
+            self.number_sequence
+        )
         np.testing.assert_array_equal(expected, actual)
 
     def test_width_not_number(self):
         wrong_input = (34, 506)
         n_digits = len(self.number_sequence)
         with self.assertRaisesRegex(Exception, "expected <int>"):
-            self.nsg_eq._calculate_available_space(self.spacing_range, wrong_input, n_digits)
+            self.nsg_eq._calculate_available_space(
+                self.spacing_range, wrong_input, n_digits
+            )
 
     def test_width_below_min_bound(self):
         image_width = 112
         n_digits = len(self.number_sequence)
         with self.assertRaisesRegex(Exception, r"min:115, max:124"):
-            self.nsg_eq._calculate_available_space(self.spacing_range, image_width, n_digits)
+            self.nsg_eq._calculate_available_space(
+                self.spacing_range, image_width, n_digits
+            )
 
     def test_width_above_max_bound(self):
         image_width = 130
         n_digits = len(self.number_sequence)
         with self.assertRaisesRegex(Exception, r"min:115, max:124"):
-            self.nsg_eq._calculate_available_space(self.spacing_range, image_width, n_digits)
+            self.nsg_eq._calculate_available_space(
+                self.spacing_range, image_width, n_digits
+            )
 
     def test_width(self):
         image_width = 120
         n_digits = len(self.number_sequence)
         expected = 8
-        actual = self.nsg_eq._calculate_available_space(self.spacing_range, image_width, n_digits)
+        actual = self.nsg_eq._calculate_available_space(
+            self.spacing_range, image_width, n_digits
+        )
         self.assertEqual(expected, actual)
 
     def test_spacing_range_not_tuple(self):
         wrong_input = [23, 42]
+        n_digits = len(self.number_sequence)
         with self.assertRaisesRegex(Exception, "expected <tuple>"):
-            self.nsg_eq._calculate_digit_spacing(len(self.number_sequence), 8, wrong_input)
+            self.nsg_eq._calculate_digit_spacing(n_digits, 8, wrong_input)
 
     def test_spacing_range_bad_tuple(self):
         wrong_input = (2, 5, 2)
+        n_digits = len(self.number_sequence)
         with self.assertRaisesRegex(Exception, "expected <tuple> of size 2"):
-            self.nsg_eq._calculate_digit_spacing(len(self.number_sequence), 8, wrong_input)
+            self.nsg_eq._calculate_digit_spacing(n_digits, 8, wrong_input)
+
+    def test_spacing_range_tuple_elements_not_int(self):
+        wrong_input = (2, 10.5)
+        n_digits = len(self.number_sequence)
+        with self.assertRaisesRegex(Exception, "expected <tuple> of size 2"):
+            self.nsg_eq._calculate_digit_spacing(n_digits, 8, wrong_input)
 
     def test_one_digit(self):
-        n_digits = 1  # if only one digit, assigns all available space after digit
+        n_digits = 1  # if only one digit, assigns all free space after digit
         expected = 3  # width of the space to be attatched after digit
-        actual = self.nsg_eq._calculate_digit_spacing(n_digits, 3, self.spacing_range)[0].shape[1]
+        actual = self.nsg_eq._calculate_digit_spacing(
+            n_digits, 3, self.spacing_range
+        )[0].shape[1]
         self.assertEqual(expected, actual)
 
     def test_digit_spacing_random_selection(self):
         np.random.seed(self.seed)
         n_digits = len(self.number_sequence)
-        with open('tests/test_data/test_digit_spacing_random_selection.npy', 'rb') as file:
+        with open(
+            'tests/test_data/test_digit_spacing_random_selection.npy', 'rb'
+        ) as file:
             expected = pickle.load(file)
-        actual = self.nsg_rs._calculate_digit_spacing(n_digits, 8, self.spacing_range)
+        actual = self.nsg_rs._calculate_digit_spacing(
+            n_digits, 8, self.spacing_range
+        )
         for i in range(len(expected)):
             np.testing.assert_array_equal(expected[i], actual[i])
 
     def test_digit_spacing_equidistant_selection(self):
         n_digits = len(self.number_sequence)
-        with open('tests/test_data/test_digit_spacing_equidistant.npy', 'rb') as file:
+        with open(
+            'tests/test_data/test_digit_spacing_equidistant.npy', 'rb'
+        ) as file:
             expected = pickle.load(file)
-        actual = self.nsg_eq._calculate_digit_spacing(n_digits, 6, self.spacing_range)
+        actual = self.nsg_eq._calculate_digit_spacing(
+            n_digits, 6, self.spacing_range
+        )
         for i in range(len(expected)):
             np.testing.assert_array_equal(expected[i], actual[i])
 
@@ -128,18 +162,24 @@ class TestNumberSequenceGeneration(unittest.TestCase):
         spacing_range = (1, 4)
         available_space = 5
         with self.assertRaisesRegex(Exception, "timeout"):
-            self.nsg_rs._calculate_digit_spacing(n_digits, available_space, spacing_range)
+            self.nsg_rs._calculate_digit_spacing(
+                n_digits, available_space, spacing_range
+            )
 
     def test_digit_spacing_equidistant_selection_no_integer_split(self):
         n_digits = 3
         spacing_range = (1, 4)
         available_space = 5
         with self.assertRaisesRegex(Exception, "no integer split"):
-            self.nsg_eq._calculate_digit_spacing(n_digits, available_space, spacing_range)
+            self.nsg_eq._calculate_digit_spacing(
+                n_digits, available_space, spacing_range
+            )
 
     def test_image_generation_rs(self):
         np.random.seed(self.seed)
-        expected = np.load('tests/test_data/stacked_digits_random_selection.npy')
+        expected = np.load(
+            'tests/test_data/stacked_digits_random_selection.npy'
+        )
         actual = self.nsg_rs.generate_numbers_sequence(
             self.number_sequence,
             self.spacing_range,
@@ -159,8 +199,12 @@ class TestNumberSequenceGeneration(unittest.TestCase):
 
     def test_pixels_within_range(self):
         number_sequence_output = self.equidistant_number_sequence_output
-        outside_range_check_list = [True if (x > 1) or (x < 0) else False for x in number_sequence_output.flat]
-        self.assertFalse(any(outside_range_check_list))  # true if any pixel is outside range.
+        outside_range_check_list = [
+            True if (x > 1) or (x < 0) else False
+            for x in number_sequence_output.flat
+        ]
+        # true if any pixel is outside range.
+        self.assertFalse(any(outside_range_check_list))
 
     def test_image_height(self):
         expected = 28
@@ -171,3 +215,7 @@ class TestNumberSequenceGeneration(unittest.TestCase):
         expected = np.float32().dtype
         actual = self.equidistant_number_sequence_output[0][0].dtype
         self.assertIs(actual, expected)
+
+
+if __name__ == '__main__':
+    unittest.main()

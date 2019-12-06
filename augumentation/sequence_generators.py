@@ -1,163 +1,216 @@
 """
 Sequence Generators
-[In progress]
+
+This module hosts sequence generators with the purpose of generating images
+representing sequences (eg: numbers, others), for data augmentation purposes.
 """
 import sys
+import uuid
 import struct
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
 
 class NumberSequenceGenerator():
-    def __init__(self, input_data_filespec=None, spacing_method='equidistant'):
-        if input_data_filespec is None:
-            input_data_filespec = {
+    """
+    Class docs. Describe __init__ params.
+    """
+    def __init__(self, input_filespec=None, spacing_method='equidistant'):
+        if input_filespec is None:
+            input_filespec = {
                 'images': 'augumentation/data/train-images.idx3-ubyte',
                 'labels': 'augumentation/data/train-labels.idx1-ubyte'
             }
-        data = self._load_idx_data(input_data_filespec)
-        self.images = data[0]
-        self.labels = data[1]
+        data = self._load_idx_data(input_filespec)
+        self._images = data[0]
+        self._labels = data[1]
         self.n_imgs = data[2]
-        self.single_img_heigh = data[3]
-        self.single_img_width = data[4]
+        self._single_img_height = data[3]
+        self._single_img_width = data[4]
         valid_spacing_methods = ['equidistant', 'random_selection']
         if spacing_method not in valid_spacing_methods:
             raise Exception(
-                "Invalid <spacing_method>. It must be one of the following {methods}"
-                .format(methods=valid_spacing_methods)
+                (
+                    'Error: Invalid <spacing_method>;'
+                    ' must be one of the following: {methods}'
+                ).format(methods=valid_spacing_methods)
             )
         self.method = spacing_method
 
     def _load_idx_data(self, filename):
         """
-        [In progress]
+        Loads idx fileformat data to class instance. Idx is described and used
+        on the MNIST project.
         """
         try:
             (img_file, lbl_file) = (filename['images'], filename['labels'])
         except (KeyError, TypeError):
-            raise Exception("Wrong filename input [input_data_filespec]. It must match what specified in docstrings.")
+            raise Exception(
+                'Error: Wrong filename input <input_filespec>.'
+                ' It must match what specified in docstrings.'
+            )
 
         with open(img_file, 'rb') as images_binary:
-            info_bytes = images_binary.read(16)  # first 16 positions have dataset information
-            (n_imgs, n_rows, n_cols) = (struct.unpack('>I', info_bytes[x:x + 4])[0] for x in range(4, 13, 4))
+            info_bytes = images_binary.read(16)
+            (n_imgs, n_rows, n_cols) = (
+                struct.unpack('>I', info_bytes[x:(x + 4)])[0]
+                for x
+                in range(4, 13, 4)  # 5 through 12 have the information needed.
+            )
             pixel_bytes = images_binary.read(n_imgs * n_rows * n_cols)
             images = np.asarray(
-                struct.unpack('>' + 'B' * (n_imgs * n_rows * n_cols), pixel_bytes)
-            ).reshape((n_imgs, n_rows, n_cols))
+                struct.unpack(
+                    '>' + 'B' * (n_imgs * n_rows * n_cols),
+                    pixel_bytes
+                )
+            ).reshape(n_imgs, n_rows, n_cols)
         with open(lbl_file, 'rb') as label_binary:
             info_bytes = label_binary.read(8)
             n_imgs_lbls = struct.unpack('>I', info_bytes[4:8])[0]
-            if n_imgs != n_imgs_lbls:
+            if (n_imgs != n_imgs_lbls):
                 raise Exception(
-                    """
-                        Number of images does not match the number of labels in file.
-                        n_images: {n_imgs}
-                        n_labels: {n_imgs_lbls}
-                        Check the input file specifications.
-                    """.format(n_imgs=n_imgs, n_imgs_lbls=n_imgs_lbls)
+                    'Error: Number of images does not match the number of '
+                    'labels. \n n_images: {n_imgs} \n n_labels: {n_imgs_lbls}'
+                    '\n Check the input file specifications.'
+                    .format(n_imgs=n_imgs, n_imgs_lbls=n_imgs_lbls)
                 )
-            labels = np.array(struct.unpack('>' + 'B' * n_imgs_lbls, label_binary.read(n_imgs_lbls)))
+            labels = np.array(
+                struct.unpack(
+                    '>' + 'B' * n_imgs_lbls,
+                    label_binary.read(n_imgs_lbls)
+                )
+            )
 
         return (images, labels, n_imgs, n_rows, n_cols)
 
     def _select_image_representations(self, digits):
         """
-        [In progress]
+        Randomnly selects image representations for each digit.
         """
-        if (not digits or not isinstance(digits, list)):  # if digits is empty list or not list
-            raise Exception("Wrong digit input. Expected a number sequence. e.g: [1,2,3]")
+        # if digits is empty list or not list
+        if (not digits or not isinstance(digits, list)):
+            raise Exception(
+                'Wrong digit input. Expected a number sequence. e.g: [1,2,3]'
+            )
         if not all((x >= 0 and x < 10) for x in digits):
-            raise Exception("Wrong digit input. All elements in sequence must be within the [0-9] range.")
+            raise Exception(
+                'Error: Wrong digit input. All elements in '
+                'sequence must be within the [0-9] range.'
+            )
 
-        # TODO: add exception to handle case where digit not in self.labels
-        digit_selection_ixs = [np.random.choice(np.where(self.labels == x)[0], 1)[0] for x in digits]
-        candidate_imgs = self.images[digit_selection_ixs]
-        rescaled_candidate_imgs = candidate_imgs / 255
+        # TODO: add exception to handle case where digit not in self._labels
+        digit_selection_ixs = [
+            np.random.choice(np.where(self._labels == x)[0], 1)[0]
+            for x
+            in digits
+        ]
+        candidate_imgs = self._images[digit_selection_ixs]
+        rescaled_candidate_imgs = (candidate_imgs / 255)
 
         return rescaled_candidate_imgs
 
     def _calculate_available_space(self, spacing_range, image_width, n_digits):
         """
-        [In progress]
-        Calculates space available to distribute amongst the digits in compiled image.
-        Checks available space can be filled or is enough to place the digit images with
-        constrained spacing in between.
+        Calculates space available to distribute amongst the digits in
+        compiled image. Checks if th available space can be filled or is
+        enough to place the digit images with constrained spacing in between.
         """
         if not isinstance(image_width, int):
             raise Exception(
-                "Wrong <image_width> input: expected <int>, got {input}".format(input=type(image_width))
+                'Error: Wrong <image_width> input: expected <int>, got {input}'
+                .format(input=type(image_width))
             )
-        digit_space_req = n_digits * self.single_img_width
+        digit_space_req = n_digits * self._single_img_width
         n_spaces = (n_digits - 1)
-        min_total_space = (digit_space_req + (n_spaces * spacing_range[0]))
-        max_total_space = (digit_space_req + (n_spaces * spacing_range[1]))
-        if (image_width < digit_space_req) or (image_width < min_total_space) or (image_width > max_total_space):
+        min_space = (digit_space_req + (n_spaces * spacing_range[0]))
+        max_space = (digit_space_req + (n_spaces * spacing_range[1]))
+        if (
+            (image_width < digit_space_req)
+            or (image_width < min_space)
+            or (image_width > max_space)
+        ):
             raise Exception(
-                """
-                Input <image_width>: {image_width} is not enough or cannot be filled by the specified
-                <spacing_range>: {spacing_range}, <image_width> must be within the following limits:
-                (min:{min_width}, max:{max_width})
-                """.format(
+                'Error: Input <image_width>: {image_width} is not enough or'
+                ' cannot be filled by the specified <spacing_range>: '
+                '{spacing_range}, <image_width> must be within the following '
+                ' limits: (min:{min_width}, max:{max_width})'
+                .format(
                     image_width=image_width,
                     spacing_range=spacing_range,
-                    min_width=max(digit_space_req, min_total_space),
-                    max_width=max_total_space
+                    min_width=max(digit_space_req, min_space),
+                    max_width=max_space
                 )
             )
         available_space = (image_width - digit_space_req)
 
         return available_space
 
-    def _calculate_digit_spacing(self, n_digits, available_space, spacing_range):
+    def _calculate_digit_spacing(self, n_digits, free_space, spacing_range):
         """
-        [In progress]
-        Calculates spacing between digits.
+        Calculates spacing between digits based on the selected calculation
+        method. Returns a list of matrices of [space x image_height].
         """
         spacing_exception = (
-            "Wrong <spacing_range> input: expected <tuple> of size 2, got {input}".format(input=spacing_range)
+            'Error: Wrong <spacing_range> input: expected <tuple> of size 2 '
+            'with each element of <int>, got {input}'.format(
+                input=spacing_range
+            )
         )
-        if not isinstance(spacing_range, tuple):  # If not tuple
+        if not isinstance(spacing_range, tuple):
             raise Exception(spacing_exception)
-        elif (len(spacing_range) != 2):  # if tuple doesn't have exactly 2 elements
+        elif (
+                (len(spacing_range) != 2)
+                or not all([isinstance(x, int) for x in spacing_range])
+        ):
             raise Exception(spacing_exception)
 
         n_spaces = (n_digits - 1)
-        if n_digits == 1:  # if there's only 1 digit in the sequence: append all available space
-            selected_spaces = [available_space]
+        if n_digits == 1:  # if only 1 digit in sequence: append all free space
+            selected_spaces = [free_space]
         elif self.method == 'equidistant':
-            equidistant_space = available_space / n_spaces
+            equidistant_space = free_space / n_spaces
             if (equidistant_space % 1):
-                raise Exception("There is no integer split for digit spacing with the specified <image_width>.")
+                raise Exception(
+                    'Error: There is no integer split for digit spacing with '
+                    'the specified <image_width>.'
+                )
             selected_spaces = [int(equidistant_space) for x in range(n_spaces)]
         elif self.method == 'random_selection':
             # TODO: add timeout
             spacing_options = list(
-                self.permutations_w_constraints(n_spaces, available_space, spacing_range[0], spacing_range[1])
+                self._permutations_w_constraints(
+                    n_spaces, free_space, spacing_range[0], spacing_range[1]
+                )
             )
-            selected_spaces = spacing_options[np.random.choice(len(spacing_options), 1)[0]]
+            selected_spaces = spacing_options[
+                np.random.choice(len(spacing_options), 1)[0]
+            ]
 
         spacing = []
         for i in range(len(selected_spaces)):
             spacing.append(
-                np.zeros(self.single_img_width * selected_spaces[i], dtype='float32')
-                .reshape(self.single_img_width, selected_spaces[i])
+                np.zeros(
+                    (self._single_img_height * selected_spaces[i]),
+                    dtype='float32'
+                )
+                .reshape(self._single_img_height, selected_spaces[i])
             )
 
         return spacing
 
-    def permutations_w_constraints(self, n_elements, sum_total, min_value, max_value):
+    def _permutations_w_constraints(self, n_elements,
+                                    sum_total, min_value, max_value):
         """
-        [In progress]
-        Calculates all permutations for a set of <n_elements> within the range <min_value,max_value>
-        that add up to <sum_total>.
+        Calculates all permutations for a set of <n_elements> within the range
+        <min_value,max_value> that add up to <sum_total>. Returns generator.
         """
         if n_elements == 1:  # base case
             if (sum_total <= max_value) & (sum_total >= min_value):
                 yield (sum_total,)
         else:
             for value in range(min_value, max_value + 1):
-                for permutation in self.permutations_w_constraints(
+                for permutation in self._permutations_w_constraints(
                     n_elements - 1, sum_total - value, min_value, max_value
                 ):
                     yield (value,) + permutation
@@ -170,50 +223,90 @@ class NumberSequenceGenerator():
         Parameters
         ----------
         digits:
-            A list-like containing the numerical values of the digits from which
-            the sequence will be generated (for example [3, 5, 0]).
+            A list-like containing the numerical values of the digits from
+            which the sequence will be generated (for example [3, 5, 0]).
         spacing_range:
-            A (minimum, maximum) pair (tuple), representing the min and max spacing
-            between digits. Unit should be pixel.
+            A (minimum, maximum) pair (tuple), representing the min and max
+            spacing between digits. Unit should be pixel.
         image_width:
             specifies the width of the image in pixels.
 
         Returns
         -------
-        The image containing the sequence of numbers. Images should be represented
-        as floating point 32bits numpy arrays with a scale ranging from 0 (black) to
-        1 (white), the first dimension corresponding to the height and the second
-        dimension to the width.
+        The image containing the sequence of numbers. Images should be
+        represented as floating point 32bits numpy arrays with a scale ranging
+        from 0 (black) to 1 (white), the first dimension corresponding to the
+        height and the second dimension to the width.
         """
         n_digits = len(digits)
 
         image_representations = self._select_image_representations(digits)
 
-        available_space = self._calculate_available_space(spacing_range, image_width, n_digits)
+        available_space = self._calculate_available_space(
+            spacing_range, image_width, n_digits
+        )
 
-        digit_spacing = self._calculate_digit_spacing(n_digits, available_space, spacing_range)
+        digit_spacing = self._calculate_digit_spacing(
+            n_digits, available_space, spacing_range
+        )
 
         stacked_images = image_representations[0]
         for i in range(1, n_digits):
-            stacked_images = np.hstack([stacked_images, digit_spacing[i - 1], image_representations[i]])
+            stacked_images = np.hstack(
+                [
+                    stacked_images, digit_spacing[i - 1],
+                    image_representations[i]
+                ]
+            )
 
         return stacked_images.astype('float32')
 
 
 if __name__ == "__main__":
-    sequence_to_gen = sys.argv[1]
-    min_spacing = sys.argv[2]
-    max_spacing = sys.argv[3]
-    image_width = sys.argv[4]
-    try:
-        spacing_method = sys.argv[5]
-    except IndexError:
-        spacing_method = 'equidistant'
-
-    stacked_images = NumberSequenceGenerator(spacing_method=spacing_method).generate_numbers_sequence(
-        sequence_to_gen,
-        (min_spacing, max_spacing),
-        image_width
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'digits',
+        help='number sequence to generate range:[0-9]. eg: 1,4,7', type=str,
     )
-    plt.imsave('stacked_images.png', stacked_images, cmap='Greys')
-    print("Successfully created a digit sequence and saved as 'stacked_images.png'.")
+    parser.add_argument(
+        'min_spacing', help='minimum spacing range. -int', type=int,
+    )
+    parser.add_argument(
+        'max_spacing', help='maximum spacing range. -int', type=int,
+    )
+    parser.add_argument(
+        'image_width', type=int, help='total image width -int',
+    )
+    parser.add_argument(
+        '-m', type=str,
+        help=(
+            'spacing calculation method. Options:'
+            '["equidistant", "random_selection"]'
+        ),
+        required=False, metavar='spacing_method', default='equidistant'
+
+    )
+    parser.add_argument(
+        '-n', type=int,
+        help=('number of sequence images to generate. -int'),
+        required=False, metavar='n_sequence_images', default=1
+    )
+    args = parser.parse_args()
+    digits = [int(item)for item in args.digits.split(',')]
+    spacing_method = args.m
+    n_sequence_images = args.n
+
+    sg = NumberSequenceGenerator(spacing_method=spacing_method)
+    for i in range(n_sequence_images):
+        filename = (str(uuid.uuid4()) + '.png')
+        stacked_images = sg.generate_numbers_sequence(
+                digits,
+                (args.min_spacing, args.max_spacing),
+                args.image_width
+        )
+        plt.imsave(filename, stacked_images, cmap='Greys')
+
+    print(
+        'Successfully created {n_sequence_images} digit sequence and saved on'
+        'current directory'.format(n_sequence_images=n_sequence_images)
+    )
