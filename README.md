@@ -1,4 +1,4 @@
-# Augumentation
+# Augmentation
 
 Image recognition models sometimes need large quantities of training data to learn all the nuances in the process of image creation.
 
@@ -44,7 +44,7 @@ _Via package import_
 
 On a python interpreter at the package's root directory:
 ```python
-from augumentation.sequence_generators import NumberSequenceGenerator
+from augmentation.sequence_generators import NumberSequenceGenerator
 
 
 digits = [1,3,7,6,2]
@@ -68,7 +68,7 @@ _Via CLI_
 
 From the package root directory, on a shell:
 ```shell
-> python augumentation/sequence_generators.py -h
+> python augmentation/sequence_generators.py -h
 ```
 ```shell
 >>> usage: sequence_generators.py [-h] [-m spacing_method] [-n n_sequence_images]
@@ -88,7 +88,7 @@ optional arguments:
 ```
 
  ```shell
-> python augumentation/sequence_generators.py 1,2,5 1 9 90 -m "random_selection" -n 5
+> python augmentation/sequence_generators.py 1,2,5 1 9 90 -m "random_selection" -n 5
  ```
  ```shell
 >>> Successfully created 5 digit sequence and saved on current directory
@@ -109,7 +109,8 @@ test_width_not_number (tests.test_sequence_generators.TestNumberSequenceGenerati
 Ran 25 tests in 0.426s
 ```
 
-### Further iprovements
+### Further improvements
 - Add timeout to random_selection spacing method with a suggestion to reduce the min/max spacing range and decrease the computational complexity.
+- Parse image bytes for selected digits.
 - Create Exceptions suite with custom exceptions.
 - Add logging and log creation logic to the module.
