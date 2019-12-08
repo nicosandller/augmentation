@@ -27,8 +27,8 @@ class NumberSequenceGenerator():
     def __init__(self, input_filespec=None, spacing_method='random_selection'):
         if input_filespec is None:
             input_filespec = {
-                'images': 'augumentation/data/train-images.idx3-ubyte',
-                'labels': 'augumentation/data/train-labels.idx1-ubyte'
+                'images': 'augmentation/data/train-images.idx3-ubyte',
+                'labels': 'augmentation/data/train-labels.idx1-ubyte'
             }
         data = self._load_idx_data(input_filespec)
         self._images = data[0]

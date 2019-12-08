@@ -1,6 +1,7 @@
 import pickle
 import unittest
 import numpy as np
+from scipy.stats import kstest
 
 from augmentation.sequence_generators import NumberSequenceGenerator
 
@@ -165,6 +166,22 @@ class TestNumberSequenceGeneration(unittest.TestCase):
             self.nsg_rs._calculate_digit_spacing(
                 n_digits, available_space, spacing_range
             )
+
+    @unittest.skip("Not implemented: uniformity test")
+    def test_digit_spacing_uniformity(self):
+        p_val_thresh = 0.2
+        np.random.seed(self.seed)
+        n_digits = 3
+        spacing_range = (1, 4)
+        available_space = 5
+        spacing_samples = []
+        for i in range(3000):
+            for space in self.nsg_rs._calculate_digit_spacing(
+                    n_digits, available_space, spacing_range):
+                spacing_samples.append(space.shape[1])
+
+        normed_samples = [x / max(spacing_samples) for x in spacing_samples]
+        self.assertTrue(kstest(normed_samples, 'uniform') > p_val_thresh)
 
     def test_digit_spacing_equidistant_selection_no_integer_split(self):
         n_digits = 3

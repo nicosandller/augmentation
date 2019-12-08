@@ -37,7 +37,7 @@ Equally splits total required image width amongst the spaces to fill (n_digits -
 
 - `random_selection`:
 
-Randomly selects a combination of spaces between digits that together with the individual digit width adds up to the required image width. **This method creates a more natural distribution of space amongst digits, but can take longer than needed to calculate all space combinations possible and select one.**
+Randomly selects a combination of spaces between digits that together with the individual digit width adds up to the required image width. **This method creates a more natural distribution of space amongst digits, but can take longer than needed to calculate all space combinations possible and select one**. It does not however, create spacings based on a uniform distribution.
 
 ### Usage
 _Via package import_
@@ -49,7 +49,7 @@ from augmentation.sequence_generators import NumberSequenceGenerator
 
 digits = [1,3,7,6,2]
 spacing_range = (3, 7)
-image_width = 150
+image_width = 155
 nsg = NumberSequenceGenerator(spacing_method='random_selection')
 mnist_digit_sequence = nsg.generate_numbers_sequence(digits, spacing_range, image_width)
 ```
@@ -106,11 +106,15 @@ test_width_below_min_bound (tests.test_sequence_generators.TestNumberSequenceGen
 test_width_not_number (tests.test_sequence_generators.TestNumberSequenceGeneration) ... ok
 
 ----------------------------------------------------------------------
-Ran 25 tests in 0.426s
+Ran 26 tests in 0.426s
 ```
 
 ### Further improvements
-- Add timeout to random_selection spacing method with a suggestion to reduce the min/max spacing range and decrease the computational complexity.
-- Parse image bytes for selected digits.
+- Parse image bytes for selected digits only to reduce execution time.
+- Test using dirilecht distribution as a faster alternative for digit spacing.
+- Test an alternative implementation of 'random_selection': randomizing the list of spacing options (in spacing_range) and then finding first permutation that sums up to available width.
+- Implement (test) timeout to random_selection spacing method with a suggestion to reduce the min/max spacing range and decrease the computational complexity.
+- Implement test for uniform distribution in spacing.
+- Add setup.py to make package installable and importable
 - Create Exceptions suite with custom exceptions.
 - Add logging and log creation logic to the module.
