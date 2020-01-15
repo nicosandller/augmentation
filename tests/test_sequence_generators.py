@@ -1,7 +1,7 @@
 import pickle
 import unittest
 import numpy as np
-from scipy.stats import kstest
+from scipy.stats import chisquare
 
 from augmentation.sequence_generators import NumberSequenceGenerator
 
@@ -16,6 +16,9 @@ class TestNumberSequenceGeneration(unittest.TestCase):
         self.number_sequence = [3, 7, 8, 6]
         self.spacing_range = (1, 4)
         self.image_width = 118
+        self.nsg_dir = NumberSequenceGenerator(
+            self.MNIST_filepath, 'dirichlet'
+        )
         self.nsg_eq = NumberSequenceGenerator(
             self.MNIST_filepath, 'equidistant'
         )
@@ -157,31 +160,45 @@ class TestNumberSequenceGeneration(unittest.TestCase):
         for i in range(len(expected)):
             np.testing.assert_array_equal(expected[i], actual[i])
 
-    @unittest.skip("Not implemented: permutation calc timeout")
-    def test_digit_spacing_random_selection_search_timeout(self):
-        n_digits = 3
-        spacing_range = (1, 4)
-        available_space = 5
-        with self.assertRaisesRegex(Exception, "timeout"):
-            self.nsg_rs._calculate_digit_spacing(
-                n_digits, available_space, spacing_range
-            )
+    def test_digit_spacing_dirichlet(self):
+        np.random.seed(self.seed)
+        n_digits = len(self.number_sequence)
+        with open(
+            'tests/test_data/test_digit_spacing_dirichlet.pickle', 'rb'
+        ) as file:
+            expected = pickle.load(file)
+        actual = self.nsg_dir._calculate_digit_spacing(
+            n_digits, 9, self.spacing_range
+        )
+        for i in range(len(expected)):
+            np.testing.assert_array_equal(expected[i], actual[i])
 
-    @unittest.skip("Not implemented: uniformity test")
-    def test_digit_spacing_uniformity(self):
-        p_val_thresh = 0.2
+    def test_digit_spacing_uniformity_dirichlet(self):
+        """test uniformity in a categorical variable"""
+        p_val_thresh = 0.95
         np.random.seed(self.seed)
         n_digits = 3
         spacing_range = (1, 4)
         available_space = 5
         spacing_samples = []
         for i in range(3000):
-            for space in self.nsg_rs._calculate_digit_spacing(
+            for space in self.nsg_dir._calculate_digit_spacing(
                     n_digits, available_space, spacing_range):
+
                 spacing_samples.append(space.shape[1])
 
-        normed_samples = [x / max(spacing_samples) for x in spacing_samples]
-        self.assertTrue(kstest(normed_samples, 'uniform') > p_val_thresh)
+        frequency = (
+            (
+                np.array(spacing_samples)
+                == np.arange(
+                    spacing_range[0],
+                    spacing_range[1]+1
+                )[..., np.newaxis]
+            ).sum(axis=1)*1. / np.array(spacing_samples).size
+        )
+
+        test = chisquare(frequency)
+        self.assertTrue(test[1] > p_val_thresh)
 
     def test_digit_spacing_equidistant_selection_no_integer_split(self):
         n_digits = 3

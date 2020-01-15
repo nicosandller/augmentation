@@ -8,6 +8,7 @@ import uuid
 import struct
 import argparse
 import numpy as np
+from numpy.random import dirichlet
 import matplotlib.pyplot as plt
 
 
@@ -22,9 +23,10 @@ class NumberSequenceGenerator():
         referencing idx fileformat containing digit images and labels.
     spacing_method:
         A string specifying the type of spacing method selected. Options are:
-        ['equidistant', 'random_selection']. Default is 'random_selection'
+        ['equidistant', 'random_selection', 'dirichlet'].
+        Default is 'dirichlet'
     """
-    def __init__(self, input_filespec=None, spacing_method='random_selection'):
+    def __init__(self, input_filespec=None, spacing_method='dirichlet'):
         if input_filespec is None:
             input_filespec = {
                 'images': 'augmentation/data/train-images.idx3-ubyte',
@@ -36,7 +38,9 @@ class NumberSequenceGenerator():
         self.n_imgs = data[2]
         self._single_img_height = data[3]
         self._single_img_width = data[4]
-        valid_spacing_methods = ['equidistant', 'random_selection']
+        valid_spacing_methods = [
+            'equidistant', 'random_selection', 'dirichlet'
+        ]
         if spacing_method not in valid_spacing_methods:
             raise Exception(
                 (
@@ -194,6 +198,28 @@ class NumberSequenceGenerator():
             selected_spaces = spacing_options[
                 np.random.choice(len(spacing_options), 1)[0]
             ]
+        elif self.method == 'dirichlet':
+            alphas = [1 for x in range(n_digits - 1)]
+
+            while True:
+                dirichlet_candidates = (
+                    dirichlet(alphas, 1).flatten() * free_space
+                )
+                candidate_for_remainder = np.random.choice(range(n_spaces))
+
+                selected_spaces = [
+                    int(np.floor(x)) for x in dirichlet_candidates
+                ]
+                remainder = round(sum([x % 1 for x in dirichlet_candidates]))
+                selected_spaces[candidate_for_remainder] += int(remainder)
+
+                if all(
+                    [
+                        (x >= spacing_range[0] and x <= spacing_range[1])
+                        for x in selected_spaces
+                    ]
+                ):
+                    break
 
         spacing = []
         for i in range(len(selected_spaces)):

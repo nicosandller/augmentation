@@ -31,13 +31,18 @@ of MNIST digit database. It does so by:
 The main challenges presented when building composite images is the spacing between the elements of the composite image needs to be arranged in some form to comply with the expected pixel size of the underlying statistical model for which it is being used as training data.
 
 To tackle this challenge this implementation builds 2 spacing calculation methods:
+
+- `dirichlet`:
+
+This method uses the [dirichlet distribution](https://en.wikipedia.org/wiki/Dirichlet_distribution) to create random (from a uniformly distributed underlying) spacing assignments. **This method is relatively fast and creates a more natural distribution of space amongst digits which simulates the spaces assigned by a human being**.
+
 - `equidistant`:
 
 Equally splits total required image width amongst the spaces to fill (n_digits - 1). Because pixels are non divisible, this method only works if the equal split is an integer. **This method can be tedious and might create less natural distribution of spaces for the model to train on.**
 
 - `random_selection`:
 
-Randomly selects a combination of spaces between digits that together with the individual digit width adds up to the required image width. **This method creates a more natural distribution of space amongst digits, but can take longer than needed to calculate all space combinations possible and select one**. It does not however, create spacings based on a uniform distribution.
+Randomly selects a combination of spaces between digits that together with the individual digit width adds up to the required image width. **This method can take longer than needed to calculate all space combinations possible and select one. Additionally, it does not create spacings based on a uniform distribution.**
 
 ### Usage
 _Via package import_
@@ -46,11 +51,10 @@ On a python interpreter at the package's root directory:
 ```python
 from augmentation.sequence_generators import NumberSequenceGenerator
 
-
 digits = [1,3,7,6,2]
 spacing_range = (3, 7)
 image_width = 155
-nsg = NumberSequenceGenerator(spacing_method='random_selection')
+nsg = NumberSequenceGenerator(spacing_method='dirichlet')
 mnist_digit_sequence = nsg.generate_numbers_sequence(digits, spacing_range, image_width)
 ```
 ```python
@@ -88,7 +92,7 @@ optional arguments:
 ```
 
  ```shell
-> python augmentation/sequence_generators.py 1,2,5 1 9 90 -m "random_selection" -n 5
+> python augmentation/sequence_generators.py 1,2,5 1 9 90 -m "dirichlet" -n 5
  ```
  ```shell
 >>> Successfully created 5 digit sequence and saved on current directory
@@ -111,7 +115,6 @@ Ran 26 tests in 0.426s
 
 ### Further improvements
 - Parse image bytes for selected digits only to reduce execution time.
-- Test using dirilecht distribution as a faster alternative for digit spacing.
 - Test an alternative implementation of 'random_selection': randomizing the list of spacing options (in spacing_range) and then finding first permutation that sums up to available width.
 - Implement (test) timeout to random_selection spacing method with a suggestion to reduce the min/max spacing range and decrease the computational complexity.
 - Implement test for uniform distribution in spacing.
