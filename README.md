@@ -113,6 +113,14 @@ test_width_not_number (tests.test_sequence_generators.TestNumberSequenceGenerati
 Ran 26 tests in 0.426s
 ```
 
+### Example results
+
+For sequence [1,7,9,3,1,6]:
+
+![gen_sequence_1](da1f34e2-cdd6-4156-b24a-7b3aa938cd24.png?)
+
+![gen_sequence_2](f33d22d8-3e8f-4ae7-b802-10e9620cba83.png?)
+
 ### Further improvements
 - Parse image bytes for selected digits only to reduce execution time.
 - Test an alternative implementation of 'random_selection': randomizing the list of spacing options (in spacing_range) and then finding first permutation that sums up to available width.
