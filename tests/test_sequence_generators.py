@@ -34,7 +34,7 @@ class TestNumberSequenceGeneration(unittest.TestCase):
         )
 
     def test_invalid_generator_method(self):
-        unsupported_method = 'dirilecht'
+        unsupported_method = 'elliptic_curve'
         with self.assertRaisesRegex(Exception, "Invalid <spacing_method>"):
             NumberSequenceGenerator(self.MNIST_filepath, unsupported_method)
 
@@ -160,46 +160,6 @@ class TestNumberSequenceGeneration(unittest.TestCase):
         for i in range(len(expected)):
             np.testing.assert_array_equal(expected[i], actual[i])
 
-    def test_digit_spacing_dirichlet(self):
-        np.random.seed(self.seed)
-        n_digits = len(self.number_sequence)
-        with open(
-            'tests/test_data/test_digit_spacing_dirichlet.pickle', 'rb'
-        ) as file:
-            expected = pickle.load(file)
-        actual = self.nsg_dir._calculate_digit_spacing(
-            n_digits, 9, self.spacing_range
-        )
-        for i in range(len(expected)):
-            np.testing.assert_array_equal(expected[i], actual[i])
-
-    def test_digit_spacing_uniformity_dirichlet(self):
-        """test uniformity in a categorical variable"""
-        p_val_thresh = 0.95
-        np.random.seed(self.seed)
-        n_digits = 3
-        spacing_range = (1, 4)
-        available_space = 5
-        spacing_samples = []
-        for i in range(3000):
-            for space in self.nsg_dir._calculate_digit_spacing(
-                    n_digits, available_space, spacing_range):
-
-                spacing_samples.append(space.shape[1])
-
-        frequency = (
-            (
-                np.array(spacing_samples)
-                == np.arange(
-                    spacing_range[0],
-                    spacing_range[1]+1
-                )[..., np.newaxis]
-            ).sum(axis=1)*1. / np.array(spacing_samples).size
-        )
-
-        test = chisquare(frequency)
-        self.assertTrue(test[1] > p_val_thresh)
-
     def test_digit_spacing_equidistant_selection_no_integer_split(self):
         n_digits = 3
         spacing_range = (1, 4)
@@ -249,6 +209,46 @@ class TestNumberSequenceGeneration(unittest.TestCase):
         expected = np.float32().dtype
         actual = self.equidistant_number_sequence_output[0][0].dtype
         self.assertIs(actual, expected)
+
+    def test_digit_spacing_dirichlet(self):
+        np.random.seed(self.seed)
+        n_digits = len(self.number_sequence)
+        with open(
+            'tests/test_data/test_digit_spacing_dirichlet.pickle', 'rb'
+        ) as file:
+            expected = pickle.load(file)
+        actual = self.nsg_dir._calculate_digit_spacing(
+            n_digits, 9, self.spacing_range
+        )
+        for i in range(len(expected)):
+            np.testing.assert_array_equal(expected[i], actual[i])
+
+    def test_digit_spacing_uniformity_dirichlet(self):
+        """test uniformity in a categorical variable"""
+        p_val_thresh = 0.95
+        np.random.seed(self.seed)
+        n_digits = 3
+        spacing_range = (1, 4)
+        available_space = 5
+        spacing_samples = []
+        for i in range(3000):
+            for space in self.nsg_dir._calculate_digit_spacing(
+                    n_digits, available_space, spacing_range):
+
+                spacing_samples.append(space.shape[1])
+
+        frequency = (
+            (
+                np.array(spacing_samples)
+                == np.arange(
+                    spacing_range[0],
+                    spacing_range[1]+1
+                )[..., np.newaxis]
+            ).sum(axis=1)*1. / np.array(spacing_samples).size
+        )
+
+        test = chisquare(frequency)
+        self.assertTrue(test[1] > p_val_thresh)
 
 
 if __name__ == '__main__':

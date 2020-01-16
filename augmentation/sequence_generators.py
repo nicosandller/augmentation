@@ -284,14 +284,11 @@ class NumberSequenceGenerator():
             n_digits, available_space, spacing_range
         )
 
-        stacked_images = image_representations[0]
+        stacked_images = [image_representations[0]]
         for i in range(1, n_digits):
-            stacked_images = np.hstack(
-                [
-                    stacked_images, digit_spacing[i - 1],
-                    image_representations[i]
-                ]
-            )
+            stacked_images += [digit_spacing[i - 1], image_representations[i]]
+
+        stacked_images = np.hstack(stacked_images)
 
         return stacked_images.astype('float32')
 
